@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Audio Quran with Urdu</title>
+<style>
+:root{--bg:#f2f5f9;--c:#fff;--t:#1c2733;--m:#64748b;--b:#1a4d8f;--l:#dbe3ec}
+@media(prefers-color-scheme:dark){:root{--bg:#10151c;--c:#1a222d;--t:#e8edf3;--m:#94a3b8;--b:#5b9be6;--l:#2a3441}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--t);font-family:Arial,sans-serif;font-size:17px;padding-bottom:150px}
+header{background:var(--b);color:#fff;padding:12px 14px;position:sticky;top:0;z-index:5}
+header b{font-size:18px}
+.bar{display:flex;gap:6px;padding:10px;position:sticky;top:48px;background:var(--bg);z-index:4}
+.bar input{flex:1;padding:12px;font-size:16px;border:1px solid var(--l);border-radius:8px;background:var(--c);color:var(--t)}
+.bar button{padding:0 14px;border:0;border-radius:8px;background:var(--c);color:var(--t);font-size:15px;border:1px solid var(--l)}
+.bar button.on{background:var(--b);color:#fff}
+.row{display:flex;align-items:center;gap:10px;background:var(--c);margin:6px 10px;padding:12px;border-radius:10px}
+.row.cur{outline:2px solid var(--b)}
+.n{min-width:34px;text-align:center;color:var(--m)}
+.nm{flex:1}.nm small{color:var(--m);display:block}
+.ar{font-size:22px;direction:rtl}
+.star{font-size:26px;background:none;border:0;color:var(--m);padding:4px 8px}
+.star.on{color:#f5a623}
+#pl{position:fixed;left:0;right:0;bottom:0;background:var(--c);border-top:1px solid var(--l);padding:10px 12px;z-index:6}
+#pl audio{width:100%;margin-top:6px}
+.ctl{display:flex;gap:8px;align-items:center;justify-content:space-between}
+.ctl button{flex:1;padding:12px;border:0;border-radius:8px;background:var(--b);color:#fff;font-size:16px}
+.ctl button.g{background:var(--l);color:var(--t)}
+#now{font-size:15px;margin-bottom:6px}
+#msg{text-align:center;color:var(--m);padding:20px}
+</style></head><body>
+<header><b>Audio Quran with Urdu</b><br><small>Sheikh Shuraim and Sudais</small></header>
+<div class="bar"><input id="q" placeholder="Search surah name or number" oninput="draw()"><button id="fb" onclick="fav=!fav;this.className=fav?'on':'';draw()">★ Favourites</button></div>
+<div id="list"></div><div id="msg"></div>
+<div id="pl">
+<div id="now">Tap a surah to start</div>
+<div class="ctl"><button class="g" onclick="step(-1)">⏮ Prev</button><button class="g" onclick="stopP()">⏹ Stop</button><button onclick="step(1)">Next ⏭</button></div>
+<audio id="a" controls preload="none"></audio>
+</div>
+<script>
+// Folder with the mp3 files (inside your GitHub repository)
+var FOLDER='audio/';
+var FILES={};
+"001s-fatiha,002s-Baqarah,003s-Imran,004s-Nisa,005s-Maida,006sAnham,007s-Aaraf,008s-Anfal,009s-Tobah,010s-Younus,011s-Hood,012s-Yousuf,013s-Raad,014s-Ibraheem,015s-Hijr,016s-Nihal,017s-Bani-Israil,018s-Kahf,019s-Mariam,020s-Taha,021s-Anbiyea,022s-Haj,023s-Mominoon,024s-Noor,025s-Furqaan,026s-Shuaara,027s-Namal,028s-Qasas,029s-Ankaboot,030s-Room,031s-Luqmaan,032s-Sajda,033s-Ahzab,034s-Saba,035s-Fatir,036s-Yaseen,037s-Saafaat,038s-Swad,039s-Zomar,040s-Momin,041s-H-Sajda,042s-Shoora,043s-Zukhraf,044s-Dukham,045s-Jasia,046s-Ahkaf,047s-Mohammad,048s-Fatah,049s-Hujara,050s-Qaaf,051s-Zaryeat,052s-Toor,053s-Najam,054s-Qamar,055s-Rahman,056s-Waqia,057s-Hadeed,058s-Mojadilah,059s-Hashar,060s-Mumtahina,061s-Saf,062s-Jumah,063s-Munafiqoon,064s-Taghabun,065s-Talaq,066s-Tahreem,067s-Mulk,068s-Qalm,069s-Haaqah,070s-Maarij,071s-Nooh,072s-Jin,073s-Muzammil,074s-Mudasir,075s-Qeamah,076s-Dahar,077s-Mursalat,078s-Naba,079s-Naziaat,080s-Abas,081s-Taqweer,082s-Infitaar,083s-Mutafifeen,084s-Inshiqaq,085s-Burooj,087s-Aala,088s-Ghashiah,089s-Fajr,090s-Balad,091s-Shams,092s-Lail,093s-Duha,094s-Alam-Nashrah,095s-Teen,096s-Alaq,097s-Qadar,098s-Bayina,099s-Zilzaal,100s-Aadiyeat,101s-Qariah,102s-Takasur,103s-Aasar,104s-Humaza,105s-feel,106s-Qureish,107s-Maoon,108s-Kusar,109s-Kafiroon,110s-Nasr,111s-Tabat,112s-Akhlaas,113s-Falaq,114s-Naas".split(",").forEach(function(f){FILES[parseInt(f.slice(0,3),10)]=f+".mp3"});
+var EN="Al-Fatihah,Al-Baqarah,Aal-E-Imran,An-Nisa,Al-Maidah,Al-Anam,Al-Araf,Al-Anfal,At-Tawbah,Yunus,Hud,Yusuf,Ar-Rad,Ibrahim,Al-Hijr,An-Nahl,Al-Isra,Al-Kahf,Maryam,Ta-Ha,Al-Anbiya,Al-Hajj,Al-Muminun,An-Nur,Al-Furqan,Ash-Shuara,An-Naml,Al-Qasas,Al-Ankabut,Ar-Rum,Luqman,As-Sajdah,Al-Ahzab,Saba,Fatir,Ya-Sin,As-Saffat,Sad,Az-Zumar,Ghafir,Fussilat,Ash-Shura,Az-Zukhruf,Ad-Dukhan,Al-Jathiyah,Al-Ahqaf,Muhammad,Al-Fath,Al-Hujurat,Qaf,Adh-Dhariyat,At-Tur,An-Najm,Al-Qamar,Ar-Rahman,Al-Waqiah,Al-Hadid,Al-Mujadilah,Al-Hashr,Al-Mumtahanah,As-Saff,Al-Jumuah,Al-Munafiqun,At-Taghabun,At-Talaq,At-Tahrim,Al-Mulk,Al-Qalam,Al-Haqqah,Al-Maarij,Nuh,Al-Jinn,Al-Muzzammil,Al-Muddaththir,Al-Qiyamah,Al-Insan,Al-Mursalat,An-Naba,An-Naziat,Abasa,At-Takwir,Al-Infitar,Al-Mutaffifin,Al-Inshiqaq,Al-Buruj,At-Tariq,Al-Ala,Al-Ghashiyah,Al-Fajr,Al-Balad,Ash-Shams,Al-Layl,Ad-Duha,Ash-Sharh,At-Tin,Al-Alaq,Al-Qadr,Al-Bayyinah,Az-Zalzalah,Al-Adiyat,Al-Qariah,At-Takathur,Al-Asr,Al-Humazah,Al-Fil,Quraysh,Al-Maun,Al-Kawthar,Al-Kafirun,An-Nasr,Al-Masad,Al-Ikhlas,Al-Falaq,An-Nas".split(",");
+var AR="الفاتحة,البقرة,آل عمران,النساء,المائدة,الأنعام,الأعراف,الأنفال,التوبة,يونس,هود,يوسف,الرعد,إبراهيم,الحجر,النحل,الإسراء,الكهف,مريم,طه,الأنبياء,الحج,المؤمنون,النور,الفرقان,الشعراء,النمل,القصص,العنكبوت,الروم,لقمان,السجدة,الأحزاب,سبأ,فاطر,يس,الصافات,ص,الزمر,غافر,فصلت,الشورى,الزخرف,الدخان,الجاثية,الأحقاف,محمد,الفتح,الحجرات,ق,الذاريات,الطور,النجم,القمر,الرحمن,الواقعة,الحديد,المجادلة,الحشر,الممتحنة,الصف,الجمعة,المنافقون,التغابن,الطلاق,التحريم,الملك,القلم,الحاقة,المعارج,نوح,الجن,المزمل,المدثر,القيامة,الإنسان,المرسلات,النبأ,النازعات,عبس,التكوير,الانفطار,المطففين,الانشقاق,البروج,الطارق,الأعلى,الغاشية,الفجر,البلد,الشمس,الليل,الضحى,الشرح,التين,العلق,القدر,البينة,الزلزلة,العاديات,القارعة,التكاثر,العصر,الهمزة,الفيل,قريش,الماعون,الكوثر,الكافرون,النصر,المسد,الإخلاص,الفلق,الناس".split(",");
+var A=document.getElementById('a'),cur=0,fav=false,FV=[];
+try{FV=JSON.parse(localStorage.getItem('fav')||'[]')}catch(e){}
+function saveFav(){try{localStorage.setItem('fav',JSON.stringify(FV))}catch(e){}}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function draw(){
+ var q=document.getElementById('q').value.trim().toLowerCase(),h='',c=0;
+ for(var i=1;i<=114;i++){
+  var t=(i+' '+EN[i-1]+' '+AR[i-1]).toLowerCase();
+  if(q&&t.indexOf(q)<0)continue; if(fav&&FV.indexOf(i)<0)continue; c++;
+  h+='<div class="row'+(i==cur?' cur':'')+'" onclick="play('+i+')"><div class="n">'+i+'</div><div class="nm">'+esc(EN[i-1])+(FILES[i]?'':'<small>Audio file not added</small>')+'</div><div class="ar">'+AR[i-1]+'</div><button class="star'+(FV.indexOf(i)>=0?' on':'')+'" onclick="event.stopPropagation();tg('+i+')">'+(FV.indexOf(i)>=0?'★':'☆')+'</button></div>';
+ }
+ document.getElementById('list').innerHTML=h;
+ document.getElementById('msg').textContent=c?'':(fav?'No favourites yet. Tap the star on a surah.':'No surah found.');
+}
+function tg(i){var k=FV.indexOf(i);if(k>=0)FV.splice(k,1);else FV.push(i);saveFav();draw()}
+function play(i){
+ if(!FILES[i]){document.getElementById('now').textContent='Surah '+i+' audio file is not in your audio folder.';return}
+ cur=i;A.src=FOLDER+FILES[i];A.play().catch(function(){});
+ document.getElementById('now').textContent='Playing: '+i+'. '+EN[i-1];
+ try{localStorage.setItem('last',i)}catch(e){}
+ if('mediaSession' in navigator){navigator.mediaSession.metadata=new MediaMetadata({title:EN[i-1],artist:'Shuraim and Sudais (Urdu)',album:'Audio Quran'});
+  navigator.mediaSession.setActionHandler('nexttrack',function(){step(1)});navigator.mediaSession.setActionHandler('previoustrack',function(){step(-1)})}
+ draw();
+}
+function step(d){var n=cur||0;for(var k=0;k<114;k++){n+=d;if(n>114)n=1;if(n<1)n=114;if(FILES[n]){play(n);return}}}
+function stopP(){A.pause();A.removeAttribute('src');A.load();cur=0;document.getElementById('now').textContent='Stopped';draw()}
+A.addEventListener('ended',function(){if(cur)step(1)});
+A.addEventListener('error',function(){if(cur){document.getElementById('now').textContent='Cannot load '+EN[cur-1]+'. Check the file name in the audio folder.'}});
+try{var l=parseInt(localStorage.getItem('last'),10);if(l&&FILES[l]){cur=l;A.src=FOLDER+FILES[l];document.getElementById('now').textContent='Last played: '+l+'. '+EN[l-1]+' (press play)'}}catch(e){}
+draw();
+</script></body></html>
